@@ -1,0 +1,5 @@
+requests>=2.32,<3
+python-dotenv>=1.0,<2
+pytest>=8,<10
+streamlit>=1.64,<2
+websockets>=17.1,<18
