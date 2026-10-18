@@ -1,9 +1,51 @@
-# Sandy Lane OHIP Python Test Client
+# Multi-hotel OHIP Python Test Client
 
 Standalone, read-only diagnostics for PMS Consulting & Support. Python 3.11+
 required. This project is independent of GCP and does not connect on startup.
 All development tests use mocks; no Sandy Lane credentials or production data
 are included.
+
+## Isolated hotel / environment profiles
+
+The default `legacy` profile preserves Sandy Lane's existing `.env` and
+process-variable precedence. No existing settings file is changed or migrated.
+For isolated profiles, copy a sanitized example locally:
+
+```powershell
+Copy-Item profiles/sandy-lane.env.example profiles/sandy-lane.env
+Copy-Item profiles/eagle-aruba-uat.env.example profiles/eagle-aruba-uat.env
+.\.venv\Scripts\python.exe main.py --hotel eagle-aruba-uat
+```
+
+Fill each hotel's private file through your secure local workflow. Completed
+`profiles/*.env` files are ignored by git; only sanitized `*.env.example` files
+are tracked. Restrict local file access and keep completed files out of tickets,
+chat, logs and shared folders. Isolated profiles read only their selected file:
+they do not inherit process OHIP variables, the root `.env`, or other profiles.
+Dotenv interpolation is disabled. Missing files fail closed. To isolate another
+hotel/environment, register a unique ID in `PROFILE_LABELS` and add a sanitized
+example; REST and Streaming need no separate implementation.
+
+Eagle Aruba Resort UAT identifies environment `mtcu11ua`, enterprise `EARE`,
+property `EAR`, `client_credentials`, and Streaming Enabled. Obtain exact UAT
+gateway/token/Streaming URLs, OAuth scope and chain code from the authorized
+portal; these are deliberately blank. Chain code is not inferred from enterprise
+or property. Eagle refuses non-`mtcu11ua` hosts before authentication. Streaming
+Enabled records provisioning metadata; it does not create or approve subscriptions.
+
+CLI selection uses `--hotel legacy`, `--hotel sandy-lane`, or
+`--hotel eagle-aruba-uat`. Streamlit's sidebar has the same selector. Switching
+closes the previous REST session, waits for its Streaming consumer to stop, and
+clears prior results, events, replay inputs and selection state. If cleanup is
+still pending, the switch is blocked until it stops. Selection itself performs
+no OAuth, REST or WebSocket request. Tokens remain in each client's memory.
+
+Live Eagle validation is pending. Configure credentials locally and obtain
+explicit user authorization before using Test Authentication and Test API
+Connectivity (GET reservations with `limit=1`). Those actions reuse the existing
+client and display only safe status. Do not run them against PROD. Do not connect
+Streaming or create subscriptions as part of this validation. Development tests
+use synthetic settings and mocked transports only; no live request is automatic.
 
 ## Windows / VS Code setup
 
@@ -242,7 +284,7 @@ or virtual environment replacement is needed.
 
 ### Connect, observe and disconnect
 
-1. Open Streaming. It shows the production label and runtime chain code.
+1. Open Streaming. It shows the selected hotel profile and runtime chain code.
    Opening the app or changing pages performs no OAuth or WebSocket request.
 2. Choose a starting position explicitly. Oracle-managed position omits offset
    and offsetType, as in Oracle's basic subscription example. Queued events may

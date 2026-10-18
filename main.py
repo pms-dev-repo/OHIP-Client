@@ -1,6 +1,7 @@
 """Interactive diagnostics. No requests occur until a menu test is selected."""
 from datetime import date
-from config import Config, ConfigurationError
+import argparse
+from config import Config, ConfigurationError, PROFILE_LABELS
 from ohip_client import OHIPClient, OHIPError
 
 
@@ -34,21 +35,24 @@ def profile_summary(data):
     print("Names, contact details and other personal information are omitted.")
 
 
-def main():
+def main(argv=()):
+    parser = argparse.ArgumentParser(description="Local read-only OHIP diagnostics")
+    parser.add_argument("--hotel", choices=PROFILE_LABELS, default="legacy")
+    args = parser.parse_args(argv)
     try:
-        client = OHIPClient(Config.from_env())
+        client = OHIPClient(Config.from_env(args.hotel))
     except ConfigurationError as exc:
         print(exc)
         return
     try:
         while True:
-            print("""
+            print(f"""
 ========================================
  PMS CONSULTING & SUPPORT
  ORACLE OHIP TEST CLIENT
 ========================================
- Hotel: Sandy Lane
- Environment: Configured OHIP Environment
+ Hotel: {PROFILE_LABELS[client.config.profile]}
+ Environment: {client.config.environment or 'Configured OHIP Environment'}
 
  1. Test Authentication
  2. Test API Connectivity
@@ -100,4 +104,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+    main(sys.argv[1:])

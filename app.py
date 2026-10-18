@@ -1,6 +1,6 @@
 """Local diagnostic UI. Importing this module does not load credentials or connect."""
 from datetime import date
-from config import Config, ConfigurationError
+from config import Config, ConfigurationError, PROFILE_LABELS
 from ohip_client import OHIPClient, OHIPError, MESSAGES
 from streaming_client import StreamingConsumer, StreamingError, event_detail_rows
 
@@ -123,8 +123,26 @@ def safe_error(exc):
 
 def get_client(st):
     if "ohip_client" not in st.session_state:
-        st.session_state.ohip_client = OHIPClient(Config.from_env())
+        st.session_state.ohip_client = OHIPClient(Config.from_env(st.session_state.get("active_hotel", "legacy")))
     return st.session_state.ohip_client
+
+
+def select_hotel(st, profile):
+    previous = st.session_state.get("active_hotel", "legacy")
+    if previous != profile:
+        consumer = st.session_state.get("streaming_consumer")
+        if consumer and not consumer.disconnect(wait=15):
+            st.error("Streaming is still closing. Try changing hotel again after it stops.")
+            return False
+        client = st.session_state.get("ohip_client")
+        if client:
+            client.close()
+        # All result, form, offset and event-selection state belongs to one hotel.
+        for key in list(st.session_state):
+            if key != "hotel_selector":
+                del st.session_state[key]
+    st.session_state["active_hotel"] = profile
+    return True
 
 
 def execute(st, key, action):
@@ -245,10 +263,10 @@ def render_stream_status(st, consumer=None):
 
 
 def render_streaming_page(st):
-    st.caption("Production â€¢ Ashburn â€¢ Approved Housekeeping and Reservations subscriptions")
+    st.caption(PROFILE_LABELS[st.session_state.get("active_hotel", "legacy")])
     try:
         if "streaming_settings" not in st.session_state:
-            st.session_state.streaming_settings = Config.from_env()
+            st.session_state.streaming_settings = Config.from_env(st.session_state.get("active_hotel", "legacy"))
         config = st.session_state.streaming_settings
     except Exception:
         st.error("Unable to load local configuration; check OHIP settings.")
@@ -322,6 +340,10 @@ def run():
     st.set_page_config(page_title="PMS Consulting & Support", layout="wide")
     st.title("PMS Consulting & Support")
     st.caption("Local OHIP diagnostic UI â€¢ Requests run only when you submit a form or click a test.")
+    selected = st.sidebar.selectbox("Hotel / environment", list(PROFILE_LABELS),
+                                    format_func=PROFILE_LABELS.get, key="hotel_selector")
+    if not select_hotel(st, selected):
+        return
     page = st.sidebar.radio("Navigation", PAGES)
     st.header(page)
     if page == "Connection":

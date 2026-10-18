@@ -3,6 +3,7 @@
 *.env
 *.env.*
 !.env.example
+!profiles/*.env.example
 .venv/
 .venv*/
 venv/

@@ -123,6 +123,8 @@ class UI:
         self.outputs = []
     def radio(self, *args):
         return self.page
+    def selectbox(self, label, options, **kwargs):
+        return options[0]
     def button(self, *args):
         return False
     def form_submit_button(self, *args):
